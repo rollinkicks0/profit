@@ -1,36 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { shopify } from '@/lib/shopify';
 import { sessionStorage } from '@/lib/session-storage';
+import axios from 'axios';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
+    const code = searchParams.get('code');
+    const shop = searchParams.get('shop');
+    const state = searchParams.get('state');
+
+    if (!code || !shop) {
+      throw new Error('Missing required parameters');
+    }
+
+    // Exchange code for access token
+    const apiKey = process.env.SHOPIFY_API_KEY;
+    const apiSecret = process.env.SHOPIFY_API_SECRET;
     
-    // Complete OAuth flow
-    const callback = await shopify.auth.callback({
-      rawRequest: request as any,
-    });
+    const tokenResponse = await axios.post(
+      `https://${shop}/admin/oauth/access_token`,
+      {
+        client_id: apiKey,
+        client_secret: apiSecret,
+        code: code,
+      }
+    );
 
-    const { session } = callback;
+    const { access_token, scope } = tokenResponse.data;
 
-    if (!session || !session.accessToken) {
+    if (!access_token) {
       throw new Error('Failed to get access token');
     }
 
     // Store session
     await sessionStorage.storeSession({
-      id: session.id,
-      shop: session.shop,
-      state: session.state,
-      accessToken: session.accessToken,
-      isOnline: session.isOnline,
+      id: `offline_${shop}`,
+      shop: shop,
+      state: state || '',
+      accessToken: access_token,
+      isOnline: false,
     });
 
     // Redirect to main app page
     const host = searchParams.get('host');
-    const redirectUrl = `/?shop=${session.shop}${host ? `&host=${host}` : ''}`;
+    const redirectUrl = `/?shop=${shop}${host ? `&host=${host}` : ''}`;
     
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   } catch (error: any) {

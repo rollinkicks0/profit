@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { shopify } from '@/lib/shopify';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,15 +19,22 @@ export async function GET(request: NextRequest) {
       ? shop 
       : `${shop}.myshopify.com`;
 
-    // Generate OAuth URL
-    const authRoute = await shopify.auth.begin({
-      shop: shopDomain,
-      callbackPath: '/api/auth/callback',
-      isOnline: false,
-      rawRequest: request as any,
-    });
+    // Get environment variables
+    const apiKey = process.env.SHOPIFY_API_KEY;
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
+    const scopes = 'read_orders';
+    
+    // Generate a random state parameter for security
+    const state = Math.random().toString(36).substring(7);
+    
+    // Build the OAuth URL manually
+    const authUrl = `https://${shopDomain}/admin/oauth/authorize?` + 
+      `client_id=${apiKey}&` +
+      `scope=${scopes}&` +
+      `redirect_uri=${encodeURIComponent(redirectUri)}&` +
+      `state=${state}`;
 
-    return NextResponse.redirect(authRoute);
+    return NextResponse.redirect(authUrl);
   } catch (error: any) {
     console.error('Auth error:', error);
     return NextResponse.json(
