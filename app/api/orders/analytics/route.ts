@@ -39,18 +39,25 @@ export async function GET(request: NextRequest) {
       endDate.toISOString()
     );
 
-    // Fetch locations
-    const locationsResponse = await axios.get(
-      `https://${shop}/admin/api/2024-10/locations.json`,
-      {
-        headers: {
-          'X-Shopify-Access-Token': session.accessToken,
-        },
-      }
-    );
-
-    const locations = locationsResponse.data.locations || [];
-    const activeLocations = locations.filter((loc: any) => loc.active);
+    // Fetch locations (with error handling)
+    let locations: any[] = [];
+    let activeLocations: any[] = [];
+    
+    try {
+      const locationsResponse = await axios.get(
+        `https://${shop}/admin/api/2024-10/locations.json`,
+        {
+          headers: {
+            'X-Shopify-Access-Token': session.accessToken,
+          },
+        }
+      );
+      locations = locationsResponse.data.locations || [];
+      activeLocations = locations.filter((loc: any) => loc.active);
+    } catch (locError) {
+      console.error('Error fetching locations:', locError);
+      // Continue without location breakdown if locations can't be fetched
+    }
 
     // Group orders by location
     const locationBreakdown: any = {};
