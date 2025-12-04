@@ -18,6 +18,9 @@ export async function GET(request: NextRequest) {
     // Exchange code for access token
     const apiKey = process.env.SHOPIFY_API_KEY;
     const apiSecret = process.env.SHOPIFY_API_SECRET;
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
+    
+    console.log('Token exchange:', { shop, apiKey: apiKey?.substring(0, 10) + '...', redirectUri });
     
     const tokenResponse = await axios.post(
       `https://${shop}/admin/oauth/access_token`,
@@ -50,8 +53,13 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   } catch (error: any) {
     console.error('Callback error:', error);
+    console.error('Error response:', error.response?.data);
     return NextResponse.json(
-      { error: 'Authentication failed', details: error.message },
+      { 
+        error: 'Authentication failed', 
+        details: error.response?.data?.error || error.message,
+        fullError: error.response?.data 
+      },
       { status: 500 }
     );
   }
