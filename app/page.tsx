@@ -2,47 +2,42 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import Navigation from './components/Navigation';
 
-interface OrderData {
-  success: boolean;
-  shop: string;
-  date: string;
-  totalOrders: number;
-  orders: Array<{
-    id: number;
-    name: string;
-    total: string;
-    currency: string;
-    created_at: string;
-  }>;
+interface DashboardStats {
+  todayOrders: number;
+  todayRevenue: string;
+  currency: string;
+  weekOrders: number;
+  monthOrders: number;
 }
 
-function Dashboard() {
+function DashboardContent() {
   const searchParams = useSearchParams();
   const shop = searchParams?.get('shop');
   
-  const [orderData, setOrderData] = useState<OrderData | null>(null);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (shop) {
-      fetchOrders();
+      fetchStats();
     }
   }, [shop]);
 
-  const fetchOrders = async () => {
+  const fetchStats = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch(`/api/orders/today?shop=${shop}`);
+      const response = await fetch(`/api/orders/stats?shop=${shop}`);
       const data = await response.json();
       
       if (data.success) {
-        setOrderData(data);
+        setStats(data);
       } else {
-        setError(data.error || 'Failed to fetch orders');
+        setError(data.error || 'Failed to fetch statistics');
       }
     } catch (err: any) {
       setError(err.message || 'An error occurred');
@@ -51,16 +46,12 @@ function Dashboard() {
     }
   };
 
-  // Helper function to handle OAuth redirect (breaks out of iframe if embedded)
   const handleOAuthRedirect = (shopDomain: string) => {
     const authUrl = `/api/auth?shop=${shopDomain}`;
     
-    // Check if we're in an iframe (embedded in Shopify admin)
     if (window.top !== window.self) {
-      // Break out of iframe for OAuth
       window.top!.location.href = authUrl;
     } else {
-      // Normal redirect
       window.location.href = authUrl;
     }
   };
@@ -97,22 +88,17 @@ function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">
-            Profit Tracker Dashboard
-          </h1>
-          <p className="text-gray-600">Store: <span className="font-semibold">{shop}</span></p>
+    <div className="min-h-screen bg-gray-50">
+      <div className="bg-white shadow-sm mb-6">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <h1 className="text-2xl font-bold text-gray-800">Profit Tracker</h1>
+          <p className="text-sm text-gray-600">Store: {shop}</p>
         </div>
+      </div>
 
-        {loading && (
-          <div className="bg-white rounded-lg shadow-md p-8 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
-            <p className="mt-4 text-gray-600">Loading orders...</p>
-          </div>
-        )}
+      <Navigation />
 
+      <div className="max-w-7xl mx-auto px-4 py-6">
         {error && (
           <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
             <p className="text-red-800">
@@ -129,72 +115,54 @@ function Dashboard() {
           </div>
         )}
 
-        {orderData && (
+        {loading ? (
+          <div className="bg-white rounded-lg shadow-md p-8 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
+            <p className="mt-4 text-gray-600">Loading dashboard...</p>
+          </div>
+        ) : (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-md p-6 text-white">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow-lg p-6 text-white">
                 <h3 className="text-lg font-semibold mb-2">Today's Orders</h3>
-                <p className="text-4xl font-bold">{orderData.totalOrders}</p>
-                <p className="text-blue-100 mt-2">{orderData.date}</p>
+                <p className="text-4xl font-bold">{stats?.todayOrders || 0}</p>
+                <p className="text-blue-100 mt-2">{new Date().toLocaleDateString()}</p>
               </div>
               
-              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-md p-6 text-white">
-                <h3 className="text-lg font-semibold mb-2">Total Revenue</h3>
-                <p className="text-4xl font-bold">
-                  {orderData.orders.length > 0 
-                    ? orderData.orders[0].currency 
-                    : '$'} 
-                  {orderData.orders.reduce((sum, order) => sum + parseFloat(order.total), 0).toFixed(2)}
-                </p>
+              <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-lg shadow-lg p-6 text-white">
+                <h3 className="text-lg font-semibold mb-2">Today's Revenue</h3>
+                <p className="text-3xl font-bold">{stats?.currency || 'NPR'} {stats?.todayRevenue || '0.00'}</p>
                 <p className="text-green-100 mt-2">Today's total</p>
               </div>
               
-              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-md p-6 text-white">
+              <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow-lg p-6 text-white">
                 <h3 className="text-lg font-semibold mb-2">Profit</h3>
-                <p className="text-4xl font-bold">Coming Soon</p>
+                <p className="text-3xl font-bold">Coming Soon</p>
                 <p className="text-purple-100 mt-2">Stage 2 feature</p>
               </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Today's Orders</h2>
-                <button
-                  onClick={fetchOrders}
-                  className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Refresh
-                </button>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">This Week</h3>
+                <p className="text-4xl font-bold text-blue-600">{stats?.weekOrders || 0}</p>
+                <p className="text-gray-600 mt-2">Orders this week</p>
               </div>
               
-              {orderData.orders.length === 0 ? (
-                <p className="text-gray-600 text-center py-8">No orders today yet.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Order</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Total</th>
-                        <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700">Time</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {orderData.orders.map((order) => (
-                        <tr key={order.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-800">{order.name}</td>
-                          <td className="px-4 py-3 text-sm text-gray-800 font-semibold">
-                            {order.currency} {order.total}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {new Date(order.created_at).toLocaleTimeString()}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">This Month</h3>
+                <p className="text-4xl font-bold text-green-600">{stats?.monthOrders || 0}</p>
+                <p className="text-gray-600 mt-2">Orders this month</p>
+              </div>
+            </div>
+
+            <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+              <h3 className="text-lg font-semibold text-blue-900 mb-2">Quick Navigation</h3>
+              <p className="text-blue-700 mb-4">Use the navigation above to:</p>
+              <ul className="list-disc list-inside text-blue-800 space-y-2">
+                <li><strong>Orders:</strong> View detailed order analytics with date ranges and filters</li>
+                <li><strong>Expenses:</strong> Track your business expenses (coming soon)</li>
+              </ul>
             </div>
           </>
         )}
@@ -213,8 +181,7 @@ export default function Home() {
         </div>
       </div>
     }>
-      <Dashboard />
+      <DashboardContent />
     </Suspense>
   );
 }
-
