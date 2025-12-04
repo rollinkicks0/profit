@@ -13,8 +13,10 @@ interface OrdersData {
   totalOrders: number;
   totalAmount: string;
   currency: string;
-  storeBreakdown: Array<{
-    store: string;
+  locationBreakdown: Array<{
+    locationId: number;
+    locationName: string;
+    address: string;
     orders: number;
     amount: string;
   }>;
@@ -28,7 +30,6 @@ function OrdersContent() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<DateRange>('today');
-  const [selectedStore, setSelectedStore] = useState<string>('all');
 
   const dateRangeOptions = [
     { value: 'today', label: 'Today' },
@@ -44,7 +45,7 @@ function OrdersContent() {
     if (shop) {
       fetchOrders();
     }
-  }, [shop, dateRange, selectedStore]);
+  }, [shop, dateRange]);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -52,7 +53,7 @@ function OrdersContent() {
     
     try {
       const response = await fetch(
-        `/api/orders/analytics?shop=${shop}&dateRange=${dateRange}&store=${selectedStore}`
+        `/api/orders/analytics?shop=${shop}&dateRange=${dateRange}`
       );
       const data = await response.json();
       
@@ -90,13 +91,10 @@ function OrdersContent() {
       <Navigation />
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Filters */}
+        {/* Date Range Filter */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Filters</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Date Range Filter */}
-            <div>
+          <div className="flex items-center justify-between">
+            <div className="flex-1 max-w-md">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Date Range
               </label>
@@ -112,33 +110,14 @@ function OrdersContent() {
                 ))}
               </select>
             </div>
-
-            {/* Store Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Store
-              </label>
-              <select
-                value={selectedStore}
-                onChange={(e) => setSelectedStore(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="all">All Stores</option>
-                {ordersData?.storeBreakdown.map((store) => (
-                  <option key={store.store} value={store.store}>
-                    {store.store}
-                  </option>
-                ))}
-              </select>
-            </div>
+            
+            <button
+              onClick={fetchOrders}
+              className="ml-4 mt-6 bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition-colors"
+            >
+              Refresh
+            </button>
           </div>
-
-          <button
-            onClick={fetchOrders}
-            className="mt-4 bg-blue-600 text-white py-2 px-6 rounded-md hover:bg-blue-700 transition-colors"
-          >
-            Apply Filters
-          </button>
         </div>
 
         {error && (
@@ -175,28 +154,47 @@ function OrdersContent() {
               </div>
             </div>
 
-            {/* Store Breakdown */}
-            {ordersData.storeBreakdown.length > 0 && (
+            {/* Location Breakdown - Dynamic based on active locations */}
+            {ordersData.locationBreakdown && ordersData.locationBreakdown.length > 0 && (
               <div className="bg-white rounded-lg shadow-md p-6">
-                <h3 className="text-xl font-bold text-gray-800 mb-4">Store Breakdown</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {ordersData.storeBreakdown.map((store) => (
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                  <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Location Breakdown
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {ordersData.locationBreakdown.map((location) => (
                     <div
-                      key={store.store}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      key={location.locationId}
+                      className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg hover:border-blue-300 transition-all"
                     >
-                      <h4 className="font-semibold text-gray-800 mb-2">{store.store}</h4>
-                      <div className="space-y-2">
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium">Orders:</span>{' '}
-                          <span className="text-blue-600 font-bold">{store.orders}</span>
-                        </p>
-                        <p className="text-sm text-gray-600">
-                          <span className="font-medium">Amount:</span>{' '}
-                          <span className="text-green-600 font-bold">
-                            {ordersData.currency} {store.amount}
-                          </span>
-                        </p>
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h4 className="text-lg font-bold text-gray-800">{location.locationName}</h4>
+                          <p className="text-sm text-gray-600 mt-1">{location.address}</p>
+                        </div>
+                        <div className="bg-blue-100 rounded-full p-2">
+                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3">
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
+                          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Orders</p>
+                          <p className="text-2xl font-bold text-blue-600">{location.orders}</p>
+                        </div>
+                        
+                        <div className="bg-white rounded-lg p-3 border border-gray-200">
+                          <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">Revenue</p>
+                          <p className="text-xl font-bold text-green-600">
+                            {ordersData.currency} {location.amount}
+                          </p>
+                        </div>
                       </div>
                     </div>
                   ))}

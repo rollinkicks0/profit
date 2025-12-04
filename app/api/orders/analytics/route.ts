@@ -39,19 +39,76 @@ export async function GET(request: NextRequest) {
       endDate.toISOString()
     );
 
+    // Fetch locations
+    const locationsResponse = await axios.get(
+      `https://${shop}/admin/api/2024-10/locations.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': session.accessToken,
+        },
+      }
+    );
+
+    const locations = locationsResponse.data.locations || [];
+    const activeLocations = locations.filter((loc: any) => loc.active);
+
+    // Group orders by location
+    const locationBreakdown: any = {};
+    
+    // Initialize all active locations with zero counts
+    activeLocations.forEach((loc: any) => {
+      locationBreakdown[loc.id] = {
+        locationId: loc.id,
+        locationName: loc.name,
+        address: `${loc.city || ''}, ${loc.province || ''}`.trim(),
+        orders: 0,
+        amount: 0,
+      };
+    });
+
+    // Count orders by location
+    orders.forEach((order: any) => {
+      // Check line items for fulfillment location
+      if (order.line_items && order.line_items.length > 0) {
+        order.line_items.forEach((item: any) => {
+          const locationId = item.fulfillment_service === 'manual' 
+            ? order.location_id 
+            : item.location_id || order.location_id;
+          
+          if (locationId && locationBreakdown[locationId]) {
+            // Add order only once per order (not per line item)
+            if (!locationBreakdown[locationId].orderIds) {
+              locationBreakdown[locationId].orderIds = new Set();
+            }
+            
+            if (!locationBreakdown[locationId].orderIds.has(order.id)) {
+              locationBreakdown[locationId].orderIds.add(order.id);
+              locationBreakdown[locationId].orders += 1;
+              locationBreakdown[locationId].amount += parseFloat(order.total_price || 0);
+            }
+          }
+        });
+      } else if (order.location_id && locationBreakdown[order.location_id]) {
+        locationBreakdown[order.location_id].orders += 1;
+        locationBreakdown[order.location_id].amount += parseFloat(order.total_price || 0);
+      }
+    });
+
+    // Convert to array and format amounts
+    const locationData = Object.values(locationBreakdown).map((loc: any) => {
+      delete loc.orderIds; // Remove the Set object
+      return {
+        ...loc,
+        amount: loc.amount.toFixed(2),
+      };
+    });
+
     // Calculate totals
     const totalOrders = orders.length;
     const totalAmount = orders.reduce((sum: number, order: any) => 
       sum + parseFloat(order.total_price || 0), 0
     );
     const currency = orders[0]?.currency || 'NPR';
-
-    // Store breakdown (for future multi-store support)
-    const storeBreakdown = [{
-      store: shop,
-      orders: totalOrders,
-      amount: totalAmount.toFixed(2),
-    }];
 
     return NextResponse.json({
       success: true,
@@ -60,7 +117,7 @@ export async function GET(request: NextRequest) {
       totalOrders,
       totalAmount: totalAmount.toFixed(2),
       currency,
-      storeBreakdown: storeFilter === 'all' ? storeBreakdown : storeBreakdown.filter(s => s.store === storeFilter),
+      locationBreakdown: locationData,
     });
   } catch (error: any) {
     console.error('Error fetching analytics:', error);
