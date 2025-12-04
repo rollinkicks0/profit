@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     
     // Complete OAuth flow
     const callback = await shopify.auth.callback({
-      rawRequest: request,
+      rawRequest: request as any,
     });
 
     const { session } = callback;

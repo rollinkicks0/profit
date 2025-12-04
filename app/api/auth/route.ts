@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
       shop: shopDomain,
       callbackPath: '/api/auth/callback',
       isOnline: false,
+      rawRequest: request as any,
     });
 
     return NextResponse.redirect(authRoute);
