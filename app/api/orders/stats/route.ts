@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       fetchOrders(shop, session.accessToken, monthAgo.toISOString()),
     ]);
 
-    const todayRevenue = todayOrders.reduce((sum, order: any) => 
+    const todayRevenue = todayOrders.reduce((sum: number, order: any) => 
       sum + parseFloat(order.total_price || 0), 0
     );
 
