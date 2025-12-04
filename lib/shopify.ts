@@ -7,7 +7,7 @@ export const shopify = shopifyApi({
   scopes: ['read_orders'],
   hostName: process.env.NEXT_PUBLIC_APP_URL!.replace(/https?:\/\//, ''),
   apiVersion: LATEST_API_VERSION,
-  isEmbeddedApp: true,
+  isEmbeddedApp: false,
 });
 
 export interface ShopifySession {
