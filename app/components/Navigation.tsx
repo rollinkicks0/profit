@@ -11,6 +11,7 @@ export default function Navigation() {
   const navItems = [
     { name: 'Dashboard', path: '/' },
     { name: 'Orders', path: '/orders' },
+    { name: 'Purchase Orders', path: '/purchase-orders' },
     { name: 'Expenses', path: '/expenses' },
   ];
 
