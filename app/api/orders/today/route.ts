@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sessionStorage } from '@/lib/session-storage';
 import { getOrdersToday } from '@/lib/shopify-client';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);

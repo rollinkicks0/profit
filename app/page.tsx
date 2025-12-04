@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 interface OrderData {
@@ -17,7 +17,7 @@ interface OrderData {
   }>;
 }
 
-export default function Home() {
+function Dashboard() {
   const searchParams = useSearchParams();
   const shop = searchParams?.get('shop');
   
@@ -186,6 +186,21 @@ export default function Home() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <Dashboard />
+    </Suspense>
   );
 }
 

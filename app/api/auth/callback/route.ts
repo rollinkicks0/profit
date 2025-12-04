@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { shopify } from '@/lib/shopify';
 import { sessionStorage } from '@/lib/session-storage';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
