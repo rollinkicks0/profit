@@ -51,6 +51,20 @@ function Dashboard() {
     }
   };
 
+  // Helper function to handle OAuth redirect (breaks out of iframe if embedded)
+  const handleOAuthRedirect = (shopDomain: string) => {
+    const authUrl = `/api/auth?shop=${shopDomain}`;
+    
+    // Check if we're in an iframe (embedded in Shopify admin)
+    if (window.top !== window.self) {
+      // Break out of iframe for OAuth
+      window.top!.location.href = authUrl;
+    } else {
+      // Normal redirect
+      window.location.href = authUrl;
+    }
+  };
+
   if (!shop) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -61,7 +75,7 @@ function Dashboard() {
             e.preventDefault();
             const formData = new FormData(e.currentTarget);
             const shopDomain = formData.get('shop') as string;
-            window.location.href = `/api/auth?shop=${shopDomain}`;
+            handleOAuthRedirect(shopDomain);
           }}>
             <input
               type="text"
@@ -106,7 +120,7 @@ function Dashboard() {
             </p>
             {error.includes('Not authenticated') && (
               <button
-                onClick={() => window.location.href = `/api/auth?shop=${shop}`}
+                onClick={() => handleOAuthRedirect(shop!)}
                 className="mt-2 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors"
               >
                 Authenticate Now
