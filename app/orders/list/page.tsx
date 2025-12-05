@@ -60,15 +60,23 @@ function OrdersListContent() {
       );
       const data = await response.json();
 
-      if (data.success) {
+      console.log(`📦 [RESPONSE] Variant ${variantId}:`, data);
+
+      if (data.success !== false) {
         setVariantCosts(prev => ({
           ...prev,
           [key]: data.cost,
         }));
-        console.log(`✅ Variant ${variantId}: Cost = ${data.cost}`);
+        console.log(`✅ [CLIENT] Variant ${variantId}: Cost = ${data.cost}`);
+      } else {
+        console.error(`❌ [CLIENT] Variant ${variantId} failed:`, data.error, data.details);
+        setVariantCosts(prev => ({
+          ...prev,
+          [key]: 0,
+        }));
       }
     } catch (error) {
-      console.error(`❌ Failed to fetch cost for variant ${variantId}:`, error);
+      console.error(`❌ [CLIENT ERROR] Variant ${variantId}:`, error);
       setVariantCosts(prev => ({
         ...prev,
         [key]: 0,
