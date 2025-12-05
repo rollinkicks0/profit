@@ -64,14 +64,24 @@ export async function GET(request: NextRequest) {
 
     // Get Supabase stats - Direct queries
     // Count total products
-    const { count: totalProducts } = await supabase
+    const { count: totalProducts, error: productsCountError } = await supabase
       .from('products')
       .select('*', { count: 'exact', head: true });
 
+    if (productsCountError) {
+      console.error('❌ Error counting products:', productsCountError);
+    }
+
     // Count total variants
-    const { count: totalVariants } = await supabase
+    const { count: totalVariants, error: variantsCountError } = await supabase
       .from('product_variants')
       .select('*', { count: 'exact', head: true });
+
+    if (variantsCountError) {
+      console.error('❌ Error counting variants:', variantsCountError);
+    }
+
+    console.log('📊 Supabase counts:', { totalProducts, totalVariants });
 
     // Count synced products (those with shopify_product_id)
     const { count: syncedProducts } = await supabase
