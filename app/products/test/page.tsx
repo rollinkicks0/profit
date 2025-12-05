@@ -45,17 +45,27 @@ function ProductTestContent() {
     
     setLoading(true);
     try {
-      const response = await fetch(
-        `/api/products/test?shop=${shop}&query=${encodeURIComponent(searchQuery)}`
-      );
+      const url = `/api/products/test?shop=${shop}&query=${encodeURIComponent(searchQuery)}`;
+      console.log('Fetching:', url);
+      
+      const response = await fetch(url);
       const data = await response.json();
+      
+      console.log('Search response:', data);
       
       if (data.success) {
         setSearchResults(data.products);
         setSelectedProduct(null);
+        
+        if (data.products.length === 0) {
+          alert('No products found. Try a different search term.');
+        }
+      } else {
+        alert(`Error: ${data.error || 'Failed to search'}`);
       }
     } catch (error) {
       console.error('Error searching products:', error);
+      alert('Failed to search products. Check console for details.');
     } finally {
       setLoading(false);
     }
@@ -128,8 +138,10 @@ function ProductTestContent() {
 
         {/* Search Results */}
         {searchResults.length > 0 && (
-          <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Search Results</h2>
+          <div className="bg-white rounded-lg shadow-md p-6 mb-6 relative z-10">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">
+              Search Results ({searchResults.length} found)
+            </h2>
             <div className="space-y-2">
               {searchResults.map((product) => (
                 <div
