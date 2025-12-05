@@ -4,6 +4,17 @@ import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Navigation from '../../components/Navigation';
 
+interface LineItem {
+  productName: string;
+  variantTitle: string;
+  quantity: number;
+  price: number;
+  unitCost: number;
+  totalCost: number;
+  variantId: number;
+  sku: string;
+}
+
 interface Order {
   id: number;
   orderNumber: string;
@@ -16,6 +27,7 @@ interface Order {
   itemCount: number;
   locationId: number;
   locationName: string;
+  lineItems: LineItem[];
 }
 
 function OrdersListContent() {
@@ -27,6 +39,17 @@ function OrdersListContent() {
   const [loading, setLoading] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [currency, setCurrency] = useState('NPR');
+  const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+
+  const toggleOrderExpand = (orderId: number) => {
+    const newExpanded = new Set(expandedOrders);
+    if (newExpanded.has(orderId)) {
+      newExpanded.delete(orderId);
+    } else {
+      newExpanded.add(orderId);
+    }
+    setExpandedOrders(newExpanded);
+  };
 
   useEffect(() => {
     if (shop) {
@@ -184,6 +207,9 @@ function OrdersListContent() {
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">
+                      
+                    </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Order
                     </th>
@@ -216,13 +242,31 @@ function OrdersListContent() {
                 <tbody className="divide-y divide-gray-200">
                   {orders.map((order) => {
                     const profit = order.totalPrice - order.totalCost;
+                    const isExpanded = expandedOrders.has(order.id);
+                    
                     return (
-                      <tr key={order.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-medium text-blue-600">
-                            {order.orderNumber}
-                          </span>
-                        </td>
+                      <>
+                        <tr key={order.id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <button
+                              onClick={() => toggleOrderExpand(order.id)}
+                              className="text-gray-500 hover:text-gray-700"
+                            >
+                              <svg
+                                className={`w-5 h-5 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                            </button>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className="text-sm font-medium text-blue-600">
+                              {order.orderNumber}
+                            </span>
+                          </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                           {new Date(order.createdAt).toLocaleDateString()}
                           <br />
@@ -262,6 +306,95 @@ function OrdersListContent() {
                           </span>
                         </td>
                       </tr>
+                      
+                      {/* Expanded Row - Line Items */}
+                      {isExpanded && (
+                        <tr>
+                          <td colSpan={9} className="px-6 py-4 bg-gray-50">
+                            <div className="bg-white rounded-lg border border-gray-200 p-4">
+                              <h4 className="font-semibold text-gray-800 mb-3">Order Items:</h4>
+                              <table className="w-full">
+                                <thead className="bg-gray-100">
+                                  <tr>
+                                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-600">Product & Variant</th>
+                                    <th className="px-4 py-2 text-center text-xs font-medium text-gray-600">Quantity</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-600">Selling Price</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-600">Cost Price</th>
+                                    <th className="px-4 py-2 text-right text-xs font-medium text-gray-600">Item Profit</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                  {order.lineItems.map((item, idx) => {
+                                    const itemProfit = (item.price - item.unitCost) * item.quantity;
+                                    return (
+                                      <tr key={idx} className="hover:bg-gray-50">
+                                        <td className="px-4 py-2 text-sm">
+                                          <div>
+                                            <p className="font-medium text-gray-800">{item.productName}</p>
+                                            {item.variantTitle && item.variantTitle !== 'Default Title' && (
+                                              <p className="text-xs text-gray-500">Variant: {item.variantTitle}</p>
+                                            )}
+                                            <p className="text-xs text-gray-400">SKU: {item.sku || 'N/A'}</p>
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-2 text-center text-sm font-semibold text-gray-700">
+                                          {item.quantity}
+                                        </td>
+                                        <td className="px-4 py-2 text-right text-sm">
+                                          <span className="font-semibold text-gray-700">
+                                            {currency} {item.price.toFixed(2)}
+                                          </span>
+                                          <br />
+                                          <span className="text-xs text-gray-500">
+                                            × {item.quantity} = {currency} {(item.price * item.quantity).toFixed(2)}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-2 text-right text-sm">
+                                          {item.unitCost > 0 ? (
+                                            <>
+                                              <span className="font-semibold text-red-600">
+                                                {currency} {item.unitCost.toFixed(2)}
+                                              </span>
+                                              <br />
+                                              <span className="text-xs text-gray-500">
+                                                × {item.quantity} = {currency} {item.totalCost.toFixed(2)}
+                                              </span>
+                                            </>
+                                          ) : (
+                                            <span className="text-xs text-red-600 font-semibold">NOT SET</span>
+                                          )}
+                                        </td>
+                                        <td className="px-4 py-2 text-right text-sm">
+                                          <span className={`font-bold ${itemProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                            {currency} {itemProfit.toFixed(2)}
+                                          </span>
+                                        </td>
+                                      </tr>
+                                    );
+                                  })}
+                                </tbody>
+                                <tfoot className="bg-gray-100 font-bold">
+                                  <tr>
+                                    <td className="px-4 py-2 text-sm text-gray-800" colSpan={2}>
+                                      TOTALS:
+                                    </td>
+                                    <td className="px-4 py-2 text-right text-sm text-green-600">
+                                      {currency} {order.totalPrice.toFixed(2)}
+                                    </td>
+                                    <td className="px-4 py-2 text-right text-sm text-red-600">
+                                      {currency} {order.totalCost.toFixed(2)}
+                                    </td>
+                                    <td className="px-4 py-2 text-right text-sm text-emerald-600">
+                                      {currency} {profit.toFixed(2)}
+                                    </td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                     );
                   })}
                 </tbody>

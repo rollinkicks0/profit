@@ -148,22 +148,34 @@ export async function GET(request: NextRequest) {
       console.log('Total variant costs fetched:', Object.keys(variantCosts).length);
     }
 
-    // Calculate cost price for each order
+    // Calculate cost price for each order and include line items
     const ordersWithCosts = orders.map((order: any) => {
       let totalCost = 0;
       let itemCount = 0;
 
-      order.line_items?.forEach((item: any) => {
+      const lineItems = (order.line_items || []).map((item: any) => {
         const variantId = item.variant_id?.toString();
         const quantity = item.quantity || 0;
-        const cost = variantCosts[variantId] || 0;
+        const unitCost = variantCosts[variantId] || 0;
+        const itemTotalCost = unitCost * quantity;
+        
+        totalCost += itemTotalCost;
+        itemCount += quantity;
         
         if (variantId && !variantCosts[variantId]) {
           console.log(`Missing cost for variant ${variantId} in order ${order.name}`);
         }
-        
-        totalCost += cost * quantity;
-        itemCount += quantity;
+
+        return {
+          productName: item.name,
+          variantTitle: item.variant_title,
+          quantity: quantity,
+          price: parseFloat(item.price || 0),
+          unitCost: unitCost,
+          totalCost: itemTotalCost,
+          variantId: item.variant_id,
+          sku: item.sku,
+        };
       });
 
       return {
@@ -178,6 +190,7 @@ export async function GET(request: NextRequest) {
         itemCount: itemCount,
         locationId: order.location_id,
         locationName: locationMap[order.location_id] || 'Unknown',
+        lineItems: lineItems,
       };
     });
 
