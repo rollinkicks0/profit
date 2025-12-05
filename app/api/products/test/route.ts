@@ -37,20 +37,26 @@ export async function GET(request: NextRequest) {
             'X-Shopify-Access-Token': session.accessToken,
           },
           params: {
-            limit: 20,
+            limit: 250, // Fetch more products
+            title: query, // Shopify title filter
             fields: 'id,title,image',
           },
         }
       );
 
       const products = productsResponse.data.products || [];
+      
+      // Also do client-side filtering for partial matches
       const filtered = products.filter((p: any) => 
         p.title.toLowerCase().includes(query.toLowerCase())
       );
 
+      console.log('Search query:', query);
+      console.log('Found products:', filtered.length);
+
       return NextResponse.json({
         success: true,
-        products: filtered.slice(0, 10),
+        products: filtered.slice(0, 20),
       });
     }
 
