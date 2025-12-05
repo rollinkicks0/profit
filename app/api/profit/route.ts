@@ -120,7 +120,7 @@ export async function GET(request: NextRequest) {
     }
 
     const totalExpenses = (expenses || []).reduce(
-      (sum, expense) => sum + parseFloat(expense.amount || 0),
+      (sum: number, expense: any) => sum + parseFloat(expense.amount || 0),
       0
     );
 
