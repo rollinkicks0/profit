@@ -43,6 +43,7 @@ function PricingPage() {
   const [syncingProduct, setSyncingProduct] = useState<Set<number>>(new Set());
   const [expandedProducts, setExpandedProducts] = useState<Set<number>>(new Set());
   const [loadingVariants, setLoadingVariants] = useState<Set<number>>(new Set());
+  const [authError, setAuthError] = useState(false);
 
   useEffect(() => {
     fetchProducts();
@@ -65,7 +66,14 @@ function PricingPage() {
   };
 
   const handleSyncAll = async () => {
+    if (!shop) {
+      alert('❌ Shop parameter is missing. Please authenticate first.');
+      return;
+    }
+
     setSyncingAll(true);
+    setAuthError(false);
+    
     try {
       const response = await fetch('/api/pricing/sync-all', {
         method: 'POST',
@@ -74,6 +82,12 @@ function PricingPage() {
       });
 
       const data = await response.json();
+      
+      if (response.status === 401) {
+        setAuthError(true);
+        alert('❌ Not authenticated with Shopify. Please authenticate first.');
+        return;
+      }
       
       if (data.success) {
         alert(`✅ Synced ${data.productsProcessed} products successfully!`);
@@ -178,6 +192,31 @@ function PricingPage() {
         </div>
 
         <Navigation />
+
+        {/* Authentication Error Alert */}
+        {authError && (
+          <div className="bg-red-50 border-l-4 border-red-500 p-4 mb-6">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Authentication Required</h3>
+                <div className="mt-2 text-sm text-red-700">
+                  <p>You need to authenticate with Shopify first before using the Pricing page.</p>
+                  <a 
+                    href={`/api/auth?shop=${shop}`}
+                    className="font-medium underline hover:text-red-600 mt-2 inline-block"
+                  >
+                    Click here to authenticate with Shopify
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Sync Controls */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
