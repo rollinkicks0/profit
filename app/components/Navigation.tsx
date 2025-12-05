@@ -10,7 +10,8 @@ export default function Navigation() {
 
   const navItems = [
     { name: 'Dashboard', path: '/' },
-    { name: 'Orders', path: '/orders' },
+    { name: 'Orders Analytics', path: '/orders' },
+    { name: 'Orders List', path: '/orders/list' },
     { name: 'Expenses', path: '/expenses' },
     { name: 'Profit', path: '/profit' },
   ];
