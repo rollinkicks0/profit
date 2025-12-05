@@ -113,6 +113,18 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Fetch expenses for the date range (MUST BE BEFORE using it)
+    const { data: expenses, error: expensesError } = await supabase
+      .from('expenses')
+      .select('*')
+      .eq('shop', shop)
+      .gte('expense_date', startDate.toISOString().split('T')[0])
+      .lte('expense_date', endDate.toISOString().split('T')[0]);
+
+    if (expensesError) {
+      console.error('Error fetching expenses:', expensesError);
+    }
+
     // Calculate location-based breakdown
     const locationData: any = {};
     
@@ -180,18 +192,7 @@ export async function GET(request: NextRequest) {
     // Calculate Gross Profit
     const grossProfit = totalRevenue - totalCost;
 
-    // Fetch expenses for the date range
-    const { data: expenses, error: expensesError } = await supabase
-      .from('expenses')
-      .select('*')
-      .eq('shop', shop)
-      .gte('expense_date', startDate.toISOString().split('T')[0])
-      .lte('expense_date', endDate.toISOString().split('T')[0]);
-
-    if (expensesError) {
-      console.error('Error fetching expenses:', expensesError);
-    }
-
+    // Calculate total expenses
     const totalExpenses = (expenses || []).reduce(
       (sum: number, expense: any) => sum + parseFloat(expense.amount || 0),
       0
