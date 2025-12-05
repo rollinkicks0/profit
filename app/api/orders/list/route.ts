@@ -76,6 +76,11 @@ export async function GET(request: NextRequest) {
       });
     });
 
+    console.log('=== ORDER COST FETCHING DEBUG ===');
+    console.log('Total orders:', orders.length);
+    console.log('Total unique variants to fetch:', variantIds.size);
+    console.log('Variant IDs:', Array.from(variantIds));
+
     // Fetch variant costs - one by one for reliability (variants with sizes/colors)
     const variantCosts: { [key: string]: number } = {};
     
