@@ -46,9 +46,20 @@ export async function GET(request: NextRequest) {
       isOnline: false,
     });
 
-    // Redirect to main app page
+    // Get redirect path from query params or default to dashboard
+    const redirectPath = searchParams.get('redirect') || `/?shop=${shop}`;
     const host = searchParams.get('host');
-    const redirectUrl = `/?shop=${shop}${host ? `&host=${host}` : ''}`;
+    
+    // Build final redirect URL
+    let redirectUrl = redirectPath;
+    if (!redirectUrl.includes('shop=')) {
+      redirectUrl += `${redirectUrl.includes('?') ? '&' : '?'}shop=${shop}`;
+    }
+    if (host) {
+      redirectUrl += `&host=${host}`;
+    }
+    
+    console.log('Auth callback - Redirecting to:', redirectUrl);
     
     return NextResponse.redirect(new URL(redirectUrl, request.url));
   } catch (error: any) {
