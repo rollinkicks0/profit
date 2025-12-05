@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Navigation from '../components/Navigation';
 import Header from '../components/Header';
 
 interface Variant {
@@ -186,7 +185,6 @@ function PricingPage() {
     <div className="min-h-screen bg-gray-50">
       <Header />
       <div className="max-w-7xl mx-auto py-8 px-4">
-        <Navigation />
 
         {/* Authentication Error Alert */}
         {authError && (

@@ -2,7 +2,6 @@
 
 import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import Navigation from '../components/Navigation';
 import Header from '../components/Header';
 
 type DateRange = 'today' | 'yesterday' | 'last7days' | 'last30days' | 'thisweek' | 'thismonth' | 'thisyear';
@@ -94,7 +93,6 @@ function ProfitContent() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header />
-      <Navigation />
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Date Range Filter */}

@@ -7,10 +7,6 @@ const inter = Inter({ subsets: ['latin'] });
 export const metadata: Metadata = {
   title: 'Profit Tracker - Shopify App',
   description: 'Track your Shopify store orders and calculate profit',
-  icons: {
-    icon: '/favicon.ico',
-    apple: '/favicon.ico',
-  },
 };
 
 export default function RootLayout({
