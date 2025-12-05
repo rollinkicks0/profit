@@ -62,22 +62,43 @@ export async function GET(request: NextRequest) {
       shopifyStats.error = 'Not authenticated';
     }
 
-    // Get Supabase stats
-    const { data: supabaseStats, error: supabaseError } = await supabase
-      .rpc('get_sync_stats');
+    // Get Supabase stats - Direct queries
+    // Count total products
+    const { count: totalProducts } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true });
 
-    if (supabaseError) {
-      throw supabaseError;
-    }
+    // Count total variants
+    const { count: totalVariants } = await supabase
+      .from('product_variants')
+      .select('*', { count: 'exact', head: true });
 
-    const stats = supabaseStats?.[0] || {
-      total_products: 0,
-      total_variants: 0,
-      synced_products: 0,
-      synced_variants: 0,
-      variants_needing_sync: 0,
-      last_sync_time: null,
-    };
+    // Count synced products (those with shopify_product_id)
+    const { count: syncedProducts } = await supabase
+      .from('products')
+      .select('*', { count: 'exact', head: true })
+      .not('shopify_product_id', 'is', null);
+
+    // Count synced variants (those with shopify_variant_id)
+    const { count: syncedVariants } = await supabase
+      .from('product_variants')
+      .select('*', { count: 'exact', head: true })
+      .not('shopify_variant_id', 'is', null);
+
+    // Count variants needing sync
+    const { count: variantsNeedingSync } = await supabase
+      .from('product_variants')
+      .select('*', { count: 'exact', head: true })
+      .eq('needs_sync', true);
+
+    // Get last sync time
+    const { data: lastSyncData } = await supabase
+      .from('product_variants')
+      .select('last_synced_at')
+      .not('last_synced_at', 'is', null)
+      .order('last_synced_at', { ascending: false })
+      .limit(1)
+      .single();
 
     return NextResponse.json({
       success: true,
@@ -87,17 +108,17 @@ export async function GET(request: NextRequest) {
         error: shopifyStats.error,
       },
       supabase: {
-        totalProducts: parseInt(stats.total_products) || 0,
-        totalVariants: parseInt(stats.total_variants) || 0,
-        syncedProducts: parseInt(stats.synced_products) || 0,
-        syncedVariants: parseInt(stats.synced_variants) || 0,
-        variantsNeedingSync: parseInt(stats.variants_needing_sync) || 0,
-        lastSyncTime: stats.last_sync_time,
+        totalProducts: totalProducts || 0,
+        totalVariants: totalVariants || 0,
+        syncedProducts: syncedProducts || 0,
+        syncedVariants: syncedVariants || 0,
+        variantsNeedingSync: variantsNeedingSync || 0,
+        lastSyncTime: lastSyncData?.last_synced_at || null,
       },
       syncStatus: {
-        productsMatched: parseInt(stats.synced_products) || 0,
-        variantsMatched: parseInt(stats.synced_variants) || 0,
-        pendingSync: parseInt(stats.variants_needing_sync) || 0,
+        productsMatched: syncedProducts || 0,
+        variantsMatched: syncedVariants || 0,
+        pendingSync: variantsNeedingSync || 0,
       },
     });
 
