@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     // Get environment variables
     const apiKey = process.env.SHOPIFY_API_KEY;
     const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
-    const scopes = 'read_orders,read_locations,read_products,read_inventory';
+    const scopes = 'read_orders,read_locations,read_products,read_inventory,read_price_rules,read_discounts';
     
     // Generate a random state parameter for security
     const state = Math.random().toString(36).substring(7);
