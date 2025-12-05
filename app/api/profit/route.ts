@@ -44,28 +44,51 @@ export async function GET(request: NextRequest) {
       sum + parseFloat(order.total_price || 0), 0
     );
 
-    // Calculate Cost of Goods Sold (COGS)
-    let totalCost = 0;
-    const productVariantIds = new Set<string>();
-    
-    // Collect all variant IDs from orders
+    // Fetch all locations
+    const locationsResponse = await axios.get(
+      `https://${shop}/admin/api/2024-10/locations.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': session.accessToken,
+        },
+      }
+    );
+    const locations = locationsResponse.data.locations || [];
+    const activeLocations = locations.filter((loc: any) => loc.active);
+
+    // Get all unique inventory item IDs from orders
+    const inventoryItemIds = new Set<string>();
     orders.forEach((order: any) => {
       order.line_items?.forEach((item: any) => {
         if (item.variant_id) {
-          productVariantIds.add(item.variant_id.toString());
+          // Get variant to find inventory_item_id
+          inventoryItemIds.add(item.variant_id.toString());
         }
       });
     });
 
-    // Fetch product variants to get cost
+    // Fetch costs for all variants at once (batch)
     const variantCosts: { [key: string]: number } = {};
     
-    if (productVariantIds.size > 0) {
+    if (inventoryItemIds.size > 0) {
       try {
-        // Fetch inventory items for variants
-        for (const variantId of Array.from(productVariantIds)) {
-          const variantResponse = await axios.get(
-            `https://${shop}/admin/api/2024-10/variants/${variantId}.json`,
+        // Get all variants with their inventory items
+        const variantIds = Array.from(inventoryItemIds).join(',');
+        const variantsResponse = await axios.get(
+          `https://${shop}/admin/api/2024-10/variants.json?ids=${variantIds}`,
+          {
+            headers: {
+              'X-Shopify-Access-Token': session.accessToken,
+            },
+          }
+        );
+
+        const variants = variantsResponse.data.variants || [];
+        const invItemIds = variants.map((v: any) => v.inventory_item_id).filter(Boolean);
+
+        if (invItemIds.length > 0) {
+          const invItemsResponse = await axios.get(
+            `https://${shop}/admin/api/2024-10/inventory_items.json?ids=${invItemIds.join(',')}`,
             {
               headers: {
                 'X-Shopify-Access-Token': session.accessToken,
@@ -73,36 +96,85 @@ export async function GET(request: NextRequest) {
             }
           );
 
-          const variant = variantResponse.data.variant;
-          const inventoryItemId = variant.inventory_item_id;
-
-          if (inventoryItemId) {
-            const inventoryResponse = await axios.get(
-              `https://${shop}/admin/api/2024-10/inventory_items/${inventoryItemId}.json`,
-              {
-                headers: {
-                  'X-Shopify-Access-Token': session.accessToken,
-                },
-              }
+          const inventoryItems = invItemsResponse.data.inventory_items || [];
+          
+          // Map inventory item costs to variant IDs
+          variants.forEach((variant: any) => {
+            const invItem = inventoryItems.find((item: any) => 
+              item.id === variant.inventory_item_id
             );
-
-            const cost = parseFloat(inventoryResponse.data.inventory_item.cost || 0);
-            variantCosts[variantId] = cost;
-          }
+            if (invItem) {
+              variantCosts[variant.id.toString()] = parseFloat(invItem.cost || 0);
+            }
+          });
         }
       } catch (error) {
         console.error('Error fetching product costs:', error);
       }
     }
 
-    // Calculate total cost based on ordered quantities
+    // Calculate location-based breakdown
+    const locationData: any = {};
+    
+    activeLocations.forEach((loc: any) => {
+      locationData[loc.id] = {
+        locationId: loc.id,
+        locationName: loc.name,
+        revenue: 0,
+        cost: 0,
+        expenses: 0,
+        orderCount: 0,
+      };
+    });
+
+    // Group orders and costs by location
     orders.forEach((order: any) => {
-      order.line_items?.forEach((item: any) => {
-        const variantId = item.variant_id?.toString();
-        const quantity = item.quantity || 0;
-        const cost = variantCosts[variantId] || 0;
-        totalCost += cost * quantity;
-      });
+      const locationId = order.location_id;
+      
+      if (locationId && locationData[locationId]) {
+        // Add revenue
+        locationData[locationId].revenue += parseFloat(order.total_price || 0);
+        locationData[locationId].orderCount += 1;
+        
+        // Add costs
+        order.line_items?.forEach((item: any) => {
+          const variantId = item.variant_id?.toString();
+          const quantity = item.quantity || 0;
+          const cost = variantCosts[variantId] || 0;
+          locationData[locationId].cost += cost * quantity;
+        });
+      }
+    });
+
+    // Add expenses by location
+    expenses?.forEach((expense: any) => {
+      // Find matching location
+      const location = activeLocations.find((loc: any) => 
+        loc.name === expense.location_name
+      );
+      
+      if (location && locationData[location.id]) {
+        locationData[location.id].expenses += parseFloat(expense.amount || 0);
+      }
+    });
+
+    // Calculate totals and format location data
+    let totalCost = 0;
+    const locationBreakdown = Object.values(locationData).map((loc: any) => {
+      totalCost += loc.cost;
+      const grossProfit = loc.revenue - loc.cost;
+      const netProfit = grossProfit - loc.expenses;
+      
+      return {
+        locationId: loc.locationId,
+        locationName: loc.locationName,
+        revenue: loc.revenue.toFixed(2),
+        cost: loc.cost.toFixed(2),
+        grossProfit: grossProfit.toFixed(2),
+        expenses: loc.expenses.toFixed(2),
+        netProfit: netProfit.toFixed(2),
+        orderCount: loc.orderCount,
+      };
     });
 
     // Calculate Gross Profit
@@ -141,6 +213,7 @@ export async function GET(request: NextRequest) {
       netProfit: netProfit.toFixed(2),
       ordersCount: orders.length,
       expensesCount: expenses?.length || 0,
+      locationBreakdown,
     });
   } catch (error: any) {
     console.error('Error calculating profit:', error);

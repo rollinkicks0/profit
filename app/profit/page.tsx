@@ -19,6 +19,16 @@ interface ProfitData {
   netProfit: string;
   ordersCount: number;
   expensesCount: number;
+  locationBreakdown: Array<{
+    locationId: number;
+    locationName: string;
+    revenue: string;
+    cost: string;
+    grossProfit: string;
+    expenses: string;
+    netProfit: string;
+    orderCount: number;
+  }>;
 }
 
 function ProfitContent() {
@@ -250,6 +260,84 @@ function ProfitContent() {
                 <p className="text-2xl font-bold">{profitData.currency} {profitData.netProfit}</p>
               </div>
             </div>
+
+            {/* Location Breakdown */}
+            {profitData.locationBreakdown && profitData.locationBreakdown.length > 0 && (
+              <div className="mt-6 bg-white rounded-lg shadow-md p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
+                  <svg className="w-6 h-6 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Profit by Location
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {profitData.locationBreakdown.map((location) => (
+                    <div
+                      key={location.locationId}
+                      className="bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-200 rounded-xl p-6 hover:shadow-lg transition-all"
+                    >
+                      <h4 className="text-lg font-bold text-gray-800 mb-4">{location.locationName}</h4>
+                      
+                      <div className="space-y-3">
+                        {/* Revenue */}
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                          <p className="text-xs text-gray-600 mb-1">Revenue</p>
+                          <p className="text-lg font-bold text-green-600">
+                            {profitData.currency} {location.revenue}
+                          </p>
+                        </div>
+                        
+                        {/* COGS */}
+                        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                          <p className="text-xs text-gray-600 mb-1">Cost of Goods</p>
+                          <p className="text-sm font-bold text-red-600">
+                            {profitData.currency} {location.cost}
+                          </p>
+                        </div>
+                        
+                        {/* Gross Profit */}
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-xs text-gray-600 mb-1">Gross Profit</p>
+                          <p className={`text-xl font-bold ${
+                            parseFloat(location.grossProfit) >= 0 ? 'text-blue-600' : 'text-red-600'
+                          }`}>
+                            {profitData.currency} {location.grossProfit}
+                          </p>
+                        </div>
+                        
+                        {/* Expenses */}
+                        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                          <p className="text-xs text-gray-600 mb-1">Expenses</p>
+                          <p className="text-sm font-bold text-orange-600">
+                            {profitData.currency} {location.expenses}
+                          </p>
+                        </div>
+                        
+                        {/* Net Profit */}
+                        <div className={`${
+                          parseFloat(location.netProfit) >= 0 
+                            ? 'bg-emerald-50 border-emerald-200' 
+                            : 'bg-rose-50 border-rose-200'
+                        } border-2 rounded-lg p-4`}>
+                          <p className="text-xs text-gray-600 mb-1 font-semibold">NET PROFIT</p>
+                          <p className={`text-2xl font-bold ${
+                            parseFloat(location.netProfit) >= 0 ? 'text-emerald-600' : 'text-rose-600'
+                          }`}>
+                            {profitData.currency} {location.netProfit}
+                          </p>
+                        </div>
+                        
+                        <p className="text-xs text-gray-500 text-center mt-2">
+                          {location.orderCount} orders
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Info Box */}
             <div className="mt-6 bg-purple-50 border border-purple-200 rounded-lg p-6">
