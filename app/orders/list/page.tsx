@@ -114,7 +114,7 @@ function OrdersListContent() {
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* Location Filter */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div className="bg-white rounded-lg shadow-md p-6 mb-6 relative z-10">
           <div className="flex items-center justify-between">
             <div className="flex-1 max-w-md">
               <label className="block text-sm font-medium text-gray-700 mb-2">
