@@ -184,13 +184,6 @@ function PricingPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-7xl mx-auto py-8 px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Pricing Management</h1>
-          <p className="text-gray-600 mt-2">
-            Store: {shop || 'Not specified'}
-          </p>
-        </div>
-
         <Navigation />
 
         {/* Authentication Error Alert */}
