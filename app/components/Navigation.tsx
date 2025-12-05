@@ -12,6 +12,7 @@ export default function Navigation() {
     { name: 'Dashboard', path: '/' },
     { name: 'Orders', path: '/orders' },
     { name: 'Expenses', path: '/expenses' },
+    { name: 'Profit', path: '/profit' },
   ];
 
   return (
