@@ -111,6 +111,7 @@ export async function GET(request: NextRequest) {
     // Fetch expenses for the date range
     const { data: expenses, error: expensesError } = await supabase
       .from('expenses')
+      .select('*')
       .eq('shop', shop)
       .gte('expense_date', startDate.toISOString().split('T')[0])
       .lte('expense_date', endDate.toISOString().split('T')[0]);
