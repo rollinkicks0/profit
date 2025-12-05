@@ -40,14 +40,68 @@ function OrdersListContent() {
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
   const [currency, setCurrency] = useState('NPR');
   const [expandedOrders, setExpandedOrders] = useState<Set<number>>(new Set());
+  const [loadingCosts, setLoadingCosts] = useState<Set<string>>(new Set());
+  const [variantCosts, setVariantCosts] = useState<{[key: string]: number}>({});
 
-  const toggleOrderExpand = (orderId: number) => {
-    const newExpanded = new Set(expandedOrders);
-    if (newExpanded.has(orderId)) {
-      newExpanded.delete(orderId);
-    } else {
-      newExpanded.add(orderId);
+  const fetchVariantCost = async (variantId: number) => {
+    const key = variantId.toString();
+    
+    // Skip if already fetched or loading
+    if (variantCosts[key] !== undefined || loadingCosts.has(key)) {
+      return;
     }
+
+    // Mark as loading
+    setLoadingCosts(prev => new Set(prev).add(key));
+
+    try {
+      const response = await fetch(
+        `/api/orders/variant-cost?shop=${shop}&variantId=${variantId}`
+      );
+      const data = await response.json();
+
+      if (data.success) {
+        setVariantCosts(prev => ({
+          ...prev,
+          [key]: data.cost,
+        }));
+        console.log(`✅ Variant ${variantId}: Cost = ${data.cost}`);
+      }
+    } catch (error) {
+      console.error(`❌ Failed to fetch cost for variant ${variantId}:`, error);
+      setVariantCosts(prev => ({
+        ...prev,
+        [key]: 0,
+      }));
+    } finally {
+      // Remove from loading
+      setLoadingCosts(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(key);
+        return newSet;
+      });
+    }
+  };
+
+  const toggleOrderExpand = async (orderId: number, order: Order) => {
+    const newExpanded = new Set(expandedOrders);
+    const isExpanding = !newExpanded.has(orderId);
+    
+    if (isExpanding) {
+      newExpanded.add(orderId);
+      
+      // Fetch costs for all variants in this order
+      console.log('📦 Fetching costs for order:', order.orderNumber);
+      const variantIds = order.lineItems.map(item => item.variantId).filter(Boolean);
+      
+      // Fetch all costs in parallel
+      await Promise.all(
+        variantIds.map(variantId => fetchVariantCost(variantId))
+      );
+    } else {
+      newExpanded.delete(orderId);
+    }
+    
     setExpandedOrders(newExpanded);
   };
 
@@ -249,7 +303,7 @@ function OrdersListContent() {
                         <tr key={order.id} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap">
                             <button
-                              onClick={() => toggleOrderExpand(order.id)}
+                              onClick={() => toggleOrderExpand(order.id, order)}
                               className="text-gray-500 hover:text-gray-700"
                             >
                               <svg
@@ -325,7 +379,14 @@ function OrdersListContent() {
                                 </thead>
                                 <tbody className="divide-y divide-gray-200">
                                   {order.lineItems.map((item, idx) => {
-                                    const itemProfit = (item.price - item.unitCost) * item.quantity;
+                                    const variantKey = item.variantId?.toString();
+                                    const fetchedCost = variantKey ? (variantCosts[variantKey] ?? null) : null;
+                                    const isLoadingCost = variantKey ? loadingCosts.has(variantKey) : false;
+                                    
+                                    // Use fetched cost if available, otherwise fall back to order data
+                                    const actualCost = fetchedCost !== null ? fetchedCost : item.unitCost;
+                                    const itemProfit = (item.price - actualCost) * item.quantity;
+                                    
                                     return (
                                       <tr key={idx} className="hover:bg-gray-50">
                                         <td className="px-4 py-2 text-sm">
@@ -334,7 +395,9 @@ function OrdersListContent() {
                                             {item.variantTitle && item.variantTitle !== 'Default Title' && (
                                               <p className="text-xs text-gray-500">Variant: {item.variantTitle}</p>
                                             )}
-                                            <p className="text-xs text-gray-400">SKU: {item.sku || 'N/A'}</p>
+                                            <p className="text-xs text-gray-400">
+                                              SKU: {item.sku || 'N/A'} | Variant ID: {item.variantId}
+                                            </p>
                                           </div>
                                         </td>
                                         <td className="px-4 py-2 text-center text-sm font-semibold text-gray-700">
@@ -350,14 +413,22 @@ function OrdersListContent() {
                                           </span>
                                         </td>
                                         <td className="px-4 py-2 text-right text-sm">
-                                          {item.unitCost > 0 ? (
+                                          {isLoadingCost ? (
+                                            <div className="flex items-center justify-end space-x-2">
+                                              <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                              </svg>
+                                              <span className="text-xs text-gray-500">Loading...</span>
+                                            </div>
+                                          ) : actualCost > 0 ? (
                                             <>
                                               <span className="font-semibold text-red-600">
-                                                {currency} {item.unitCost.toFixed(2)}
+                                                {currency} {actualCost.toFixed(2)}
                                               </span>
                                               <br />
                                               <span className="text-xs text-gray-500">
-                                                × {item.quantity} = {currency} {item.totalCost.toFixed(2)}
+                                                × {item.quantity} = {currency} {(actualCost * item.quantity).toFixed(2)}
                                               </span>
                                             </>
                                           ) : (
@@ -365,9 +436,13 @@ function OrdersListContent() {
                                           )}
                                         </td>
                                         <td className="px-4 py-2 text-right text-sm">
-                                          <span className={`font-bold ${itemProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                                            {currency} {itemProfit.toFixed(2)}
-                                          </span>
+                                          {isLoadingCost ? (
+                                            <span className="text-xs text-gray-500">...</span>
+                                          ) : (
+                                            <span className={`font-bold ${itemProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                              {currency} {itemProfit.toFixed(2)}
+                                            </span>
+                                          )}
                                         </td>
                                       </tr>
                                     );
@@ -382,10 +457,24 @@ function OrdersListContent() {
                                       {currency} {order.totalPrice.toFixed(2)}
                                     </td>
                                     <td className="px-4 py-2 text-right text-sm text-red-600">
-                                      {currency} {order.totalCost.toFixed(2)}
+                                      {currency} {
+                                        order.lineItems.reduce((sum, item) => {
+                                          const variantKey = item.variantId?.toString();
+                                          const fetchedCost = variantKey ? (variantCosts[variantKey] ?? null) : null;
+                                          const actualCost = fetchedCost !== null ? fetchedCost : item.unitCost;
+                                          return sum + (actualCost * item.quantity);
+                                        }, 0).toFixed(2)
+                                      }
                                     </td>
                                     <td className="px-4 py-2 text-right text-sm text-emerald-600">
-                                      {currency} {profit.toFixed(2)}
+                                      {currency} {
+                                        (order.totalPrice - order.lineItems.reduce((sum, item) => {
+                                          const variantKey = item.variantId?.toString();
+                                          const fetchedCost = variantKey ? (variantCosts[variantKey] ?? null) : null;
+                                          const actualCost = fetchedCost !== null ? fetchedCost : item.unitCost;
+                                          return sum + (actualCost * item.quantity);
+                                        }, 0)).toFixed(2)
+                                      }
                                     </td>
                                   </tr>
                                 </tfoot>
