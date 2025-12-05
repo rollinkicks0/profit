@@ -27,21 +27,18 @@ export default function Header() {
     
     setIsAuthenticating(true);
     
-    // Store current page to redirect back after auth
+    // Store current page to redirect back after auth (in localStorage)
     const currentPage = pathname + (shop ? `?shop=${shop}` : '');
     localStorage.setItem('redirect_after_auth', currentPage);
-    localStorage.setItem('shopify_shop', shop);
     
-    const authUrl = `/api/auth?shop=${shop}&redirect=${encodeURIComponent(currentPage)}`;
+    const authUrl = `/api/auth?shop=${shop}`;
     
     // Break out of iframe if needed
-    setTimeout(() => {
-      if (window.top !== window.self) {
-        window.top!.location.href = authUrl;
-      } else {
-        window.location.href = authUrl;
-      }
-    }, 500); // Small delay to show loading state
+    if (window.top !== window.self) {
+      window.top!.location.href = authUrl;
+    } else {
+      window.location.href = authUrl;
+    }
   };
 
   const navItems = [

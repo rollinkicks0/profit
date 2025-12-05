@@ -27,6 +27,14 @@ function DashboardContent() {
     if (shopParam) {
       setShop(shopParam);
       localStorage.setItem('shopify_shop', shopParam);
+      
+      // Check if we should redirect to saved page after auth
+      const redirectAfterAuth = localStorage.getItem('redirect_after_auth');
+      if (redirectAfterAuth && redirectAfterAuth !== '/?shop=' + shopParam) {
+        localStorage.removeItem('redirect_after_auth');
+        window.location.href = redirectAfterAuth;
+        return;
+      }
     } else {
       const storedShop = localStorage.getItem('shopify_shop');
       if (storedShop) {

@@ -6,7 +6,6 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const shop = searchParams.get('shop');
-    const redirectAfterAuth = searchParams.get('redirect');
 
     if (!shop) {
       return NextResponse.json(
@@ -22,21 +21,13 @@ export async function GET(request: NextRequest) {
 
     // Get environment variables
     const apiKey = process.env.SHOPIFY_API_KEY;
-    
-    // Build redirect URI with optional redirect path
-    let redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
-    if (redirectAfterAuth) {
-      redirectUri += `?redirect=${encodeURIComponent(redirectAfterAuth)}`;
-    }
-    
+    const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/auth/callback`;
     const scopes = 'read_orders,read_locations,read_products,read_inventory,read_price_rules,read_discounts';
     
     // Generate a random state parameter for security
     const state = Math.random().toString(36).substring(7);
     
-    console.log('Auth initiation - Will redirect back to:', redirectAfterAuth || 'dashboard');
-    
-    // Build the OAuth URL manually
+    // Build the OAuth URL manually (SIMPLE - no query params in redirect_uri!)
     const authUrl = `https://${shopDomain}/admin/oauth/authorize?` + 
       `client_id=${apiKey}&` +
       `scope=${scopes}&` +
