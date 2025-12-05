@@ -14,6 +14,7 @@ export default function Navigation() {
     { name: 'Orders List', path: '/orders/list' },
     { name: 'Expenses', path: '/expenses' },
     { name: 'Profit', path: '/profit' },
+    { name: 'Pricing', path: '/pricing' },
     { name: 'Test Products', path: '/products/test' },
   ];
 
