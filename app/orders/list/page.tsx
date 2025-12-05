@@ -15,6 +15,7 @@ interface Order {
   fulfillmentStatus: string;
   itemCount: number;
   locationId: number;
+  locationName: string;
 }
 
 function OrdersListContent() {
@@ -63,6 +64,22 @@ function OrdersListContent() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const getLocationBadge = (locationName: string) => {
+    const colors: any = {
+      'Birthmode': 'bg-blue-100 text-blue-800',
+      'Damak': 'bg-green-100 text-green-800',
+      'Dharan': 'bg-purple-100 text-purple-800',
+    };
+    
+    const color = colors[locationName] || 'bg-gray-100 text-gray-800';
+    
+    return (
+      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${color}`}>
+        {locationName}
+      </span>
+    );
   };
 
   const getStatusBadge = (status: string, type: 'payment' | 'fulfillment') => {
@@ -174,6 +191,9 @@ function OrdersListContent() {
                       Date
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Location
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Payment Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -209,6 +229,9 @@ function OrdersListContent() {
                           <span className="text-xs text-gray-400">
                             {new Date(order.createdAt).toLocaleTimeString()}
                           </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {getLocationBadge(order.locationName)}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {getStatusBadge(order.paymentStatus, 'payment')}

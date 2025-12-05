@@ -27,6 +27,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Fetch locations first
+    const locationsResponse = await axios.get(
+      `https://${shop}/admin/api/2024-10/locations.json`,
+      {
+        headers: {
+          'X-Shopify-Access-Token': session.accessToken,
+        },
+      }
+    );
+    const locations = locationsResponse.data.locations || [];
+    const locationMap: any = {};
+    locations.forEach((loc: any) => {
+      locationMap[loc.id] = loc.name;
+    });
+
     // Fetch orders (recent 250)
     const ordersResponse = await axios.get(
       `https://${shop}/admin/api/2024-10/orders.json`,
@@ -142,6 +157,11 @@ export async function GET(request: NextRequest) {
         const variantId = item.variant_id?.toString();
         const quantity = item.quantity || 0;
         const cost = variantCosts[variantId] || 0;
+        
+        if (variantId && !variantCosts[variantId]) {
+          console.log(`Missing cost for variant ${variantId} in order ${order.name}`);
+        }
+        
         totalCost += cost * quantity;
         itemCount += quantity;
       });
@@ -157,6 +177,7 @@ export async function GET(request: NextRequest) {
         fulfillmentStatus: order.fulfillment_status || 'unfulfilled',
         itemCount: itemCount,
         locationId: order.location_id,
+        locationName: locationMap[order.location_id] || 'Unknown',
       };
     });
 
