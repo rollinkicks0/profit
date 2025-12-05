@@ -14,11 +14,28 @@ interface DashboardStats {
 
 function DashboardContent() {
   const searchParams = useSearchParams();
-  const shop = searchParams?.get('shop');
+  const shopParam = searchParams?.get('shop');
   
+  // Try to get shop from URL param or localStorage
+  const [shop, setShop] = useState<string | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Priority: URL param > localStorage
+    if (shopParam) {
+      setShop(shopParam);
+      localStorage.setItem('shopify_shop', shopParam);
+    } else {
+      const storedShop = localStorage.getItem('shopify_shop');
+      if (storedShop) {
+        setShop(storedShop);
+        // Update URL with stored shop
+        window.history.replaceState(null, '', `/?shop=${storedShop}`);
+      }
+    }
+  }, [shopParam]);
 
   useEffect(() => {
     if (shop) {
