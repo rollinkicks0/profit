@@ -91,20 +91,22 @@ export async function GET(request: NextRequest) {
         
         try {
           // Fetch variants in batch
-          const variantsResponse = await axios.get(
-            `https://${shop}/admin/api/2024-10/variants.json`,
-            {
-              headers: {
-                'X-Shopify-Access-Token': session.accessToken,
-              },
-              params: {
-                ids: batch.join(','),
-              },
-            }
-          );
+          const variantsUrl = `https://${shop}/admin/api/2024-10/variants.json?ids=${batch.join(',')}`;
+          console.log(`Fetching variants from: ${variantsUrl}`);
+          
+          const variantsResponse = await axios.get(variantsUrl, {
+            headers: {
+              'X-Shopify-Access-Token': session.accessToken,
+            },
+          });
 
           const variants = variantsResponse.data.variants || [];
-          console.log(`Batch ${i}: Got ${variants.length} variants`);
+          console.log(`Batch ${i}: Got ${variants.length} variants from API`);
+          console.log('Variants data:', JSON.stringify(variants.map((v: any) => ({
+            id: v.id,
+            title: v.title,
+            inventory_item_id: v.inventory_item_id
+          })), null, 2));
           
           // Get inventory item IDs
           const invItemIds = variants
@@ -113,20 +115,22 @@ export async function GET(request: NextRequest) {
 
           if (invItemIds.length > 0) {
             // Fetch inventory items
-            const invItemsResponse = await axios.get(
-              `https://${shop}/admin/api/2024-10/inventory_items.json`,
-              {
-                headers: {
-                  'X-Shopify-Access-Token': session.accessToken,
-                },
-                params: {
-                  ids: invItemIds.join(','),
-                },
-              }
-            );
+            const invUrl = `https://${shop}/admin/api/2024-10/inventory_items.json?ids=${invItemIds.join(',')}`;
+            console.log(`Fetching inventory items from: ${invUrl}`);
+            
+            const invItemsResponse = await axios.get(invUrl, {
+              headers: {
+                'X-Shopify-Access-Token': session.accessToken,
+              },
+            });
 
             const inventoryItems = invItemsResponse.data.inventory_items || [];
-            console.log(`Batch ${i}: Got ${inventoryItems.length} inventory items`);
+            console.log(`Batch ${i}: Got ${inventoryItems.length} inventory items from API`);
+            console.log('Inventory items:', JSON.stringify(inventoryItems.map((item: any) => ({
+              id: item.id,
+              cost: item.cost,
+              sku: item.sku
+            })), null, 2));
             
             // Map costs to variant IDs
             variants.forEach((variant: any) => {
