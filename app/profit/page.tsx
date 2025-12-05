@@ -339,7 +339,7 @@ function ProfitContent() {
                 <p><strong>Gross Profit</strong> = Total Sales Revenue - Cost of Goods Sold</p>
                 <p><strong>Net Profit</strong> = Gross Profit - Total Expenses</p>
                 <p className="text-sm text-purple-600 mt-4">
-                  * Make sure product costs are set in Shopify Admin → Products → Inventory for accurate calculations
+                  * Cost prices are fetched from your Supabase pricing database for accurate calculations
                 </p>
               </div>
             </div>

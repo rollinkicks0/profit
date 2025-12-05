@@ -56,60 +56,43 @@ export async function GET(request: NextRequest) {
     const locations = locationsResponse.data.locations || [];
     const activeLocations = locations.filter((loc: any) => loc.active);
 
-    // Get all unique inventory item IDs from orders
-    const inventoryItemIds = new Set<string>();
+    // Get all unique variant IDs from orders
+    const variantIds = new Set<string>();
     orders.forEach((order: any) => {
       order.line_items?.forEach((item: any) => {
         if (item.variant_id) {
-          // Get variant to find inventory_item_id
-          inventoryItemIds.add(item.variant_id.toString());
+          variantIds.add(item.variant_id.toString());
         }
       });
     });
 
-    // Fetch costs for all variants at once (batch)
+    // Fetch costs from Supabase (our pricing database)
     const variantCosts: { [key: string]: number } = {};
     
-    if (inventoryItemIds.size > 0) {
+    if (variantIds.size > 0) {
       try {
-        // Get all variants with their inventory items
-        const variantIds = Array.from(inventoryItemIds).join(',');
-        const variantsResponse = await axios.get(
-          `https://${shop}/admin/api/2024-10/variants.json?ids=${variantIds}`,
-          {
-            headers: {
-              'X-Shopify-Access-Token': session.accessToken,
-            },
-          }
-        );
+        console.log('Fetching costs for', variantIds.size, 'variants from Supabase...');
+        
+        // Fetch all variant costs from Supabase in one query
+        const { data: variantsData, error: variantsError } = await supabase
+          .from('product_variants')
+          .select('shopify_variant_id, cost')
+          .in('shopify_variant_id', Array.from(variantIds));
 
-        const variants = variantsResponse.data.variants || [];
-        const invItemIds = variants.map((v: any) => v.inventory_item_id).filter(Boolean);
-
-        if (invItemIds.length > 0) {
-          const invItemsResponse = await axios.get(
-            `https://${shop}/admin/api/2024-10/inventory_items.json?ids=${invItemIds.join(',')}`,
-            {
-              headers: {
-                'X-Shopify-Access-Token': session.accessToken,
-              },
-            }
-          );
-
-          const inventoryItems = invItemsResponse.data.inventory_items || [];
-          
-          // Map inventory item costs to variant IDs
-          variants.forEach((variant: any) => {
-            const invItem = inventoryItems.find((item: any) => 
-              item.id === variant.inventory_item_id
-            );
-            if (invItem) {
-              variantCosts[variant.id.toString()] = parseFloat(invItem.cost || 0);
+        if (variantsError) {
+          console.error('Error fetching variant costs from Supabase:', variantsError);
+        } else if (variantsData) {
+          // Map variant costs by shopify_variant_id
+          variantsData.forEach((variant: any) => {
+            if (variant.shopify_variant_id) {
+              variantCosts[variant.shopify_variant_id.toString()] = parseFloat(variant.cost || 0);
             }
           });
+          
+          console.log(`Loaded ${Object.keys(variantCosts).length} variant costs from Supabase`);
         }
       } catch (error) {
-        console.error('Error fetching product costs:', error);
+        console.error('Error fetching product costs from Supabase:', error);
       }
     }
 
