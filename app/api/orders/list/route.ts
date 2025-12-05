@@ -61,47 +61,76 @@ export async function GET(request: NextRequest) {
       });
     });
 
-    // Fetch variant costs in batch
+    // Fetch variant costs - one by one for reliability (variants with sizes/colors)
     const variantCosts: { [key: string]: number } = {};
     
     if (variantIds.size > 0) {
-      try {
-        const variantsResponse = await axios.get(
-          `https://${shop}/admin/api/2024-10/variants.json?ids=${Array.from(variantIds).join(',')}`,
-          {
-            headers: {
-              'X-Shopify-Access-Token': session.accessToken,
-            },
-          }
-        );
-
-        const variants = variantsResponse.data.variants || [];
-        const invItemIds = variants.map((v: any) => v.inventory_item_id).filter(Boolean);
-
-        if (invItemIds.length > 0) {
-          const invItemsResponse = await axios.get(
-            `https://${shop}/admin/api/2024-10/inventory_items.json?ids=${invItemIds.join(',')}`,
+      console.log('Fetching costs for', variantIds.size, 'variants');
+      
+      // Process in smaller batches to avoid API limits
+      const variantIdsArray = Array.from(variantIds);
+      const batchSize = 50;
+      
+      for (let i = 0; i < variantIdsArray.length; i += batchSize) {
+        const batch = variantIdsArray.slice(i, i + batchSize);
+        
+        try {
+          // Fetch variants in batch
+          const variantsResponse = await axios.get(
+            `https://${shop}/admin/api/2024-10/variants.json`,
             {
               headers: {
                 'X-Shopify-Access-Token': session.accessToken,
               },
+              params: {
+                ids: batch.join(','),
+              },
             }
           );
 
-          const inventoryItems = invItemsResponse.data.inventory_items || [];
+          const variants = variantsResponse.data.variants || [];
+          console.log(`Batch ${i}: Got ${variants.length} variants`);
           
-          variants.forEach((variant: any) => {
-            const invItem = inventoryItems.find((item: any) => 
-              item.id === variant.inventory_item_id
+          // Get inventory item IDs
+          const invItemIds = variants
+            .map((v: any) => v.inventory_item_id)
+            .filter(Boolean);
+
+          if (invItemIds.length > 0) {
+            // Fetch inventory items
+            const invItemsResponse = await axios.get(
+              `https://${shop}/admin/api/2024-10/inventory_items.json`,
+              {
+                headers: {
+                  'X-Shopify-Access-Token': session.accessToken,
+                },
+                params: {
+                  ids: invItemIds.join(','),
+                },
+              }
             );
-            if (invItem) {
-              variantCosts[variant.id.toString()] = parseFloat(invItem.cost || 0);
-            }
-          });
+
+            const inventoryItems = invItemsResponse.data.inventory_items || [];
+            console.log(`Batch ${i}: Got ${inventoryItems.length} inventory items`);
+            
+            // Map costs to variant IDs
+            variants.forEach((variant: any) => {
+              const invItem = inventoryItems.find((item: any) => 
+                item.id === variant.inventory_item_id
+              );
+              if (invItem && invItem.cost) {
+                const cost = parseFloat(invItem.cost);
+                variantCosts[variant.id.toString()] = cost;
+                console.log(`Variant ${variant.id}: Cost = ${cost}`);
+              }
+            });
+          }
+        } catch (error: any) {
+          console.error('Error fetching batch costs:', error.response?.data || error.message);
         }
-      } catch (error) {
-        console.error('Error fetching costs:', error);
       }
+      
+      console.log('Total variant costs fetched:', Object.keys(variantCosts).length);
     }
 
     // Calculate cost price for each order
