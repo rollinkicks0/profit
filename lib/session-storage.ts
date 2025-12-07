@@ -1,5 +1,5 @@
 import { ShopifySession } from './shopify';
-import { supabase } from './supabase';
+import { supabaseServer } from './supabase-server';
 
 /**
  * Persistent Session Storage using Supabase
@@ -11,7 +11,7 @@ class SessionStorage {
    */
   async storeSession(session: ShopifySession): Promise<boolean> {
     try {
-      const { error } = await supabase
+      const { error } = await supabaseServer
         .from('shopify_sessions')
         .upsert({
           id: session.id,
@@ -44,7 +44,7 @@ class SessionStorage {
    */
   async loadSession(id: string): Promise<ShopifySession | undefined> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseServer
         .from('shopify_sessions')
         .select('*')
         .eq('id', id)
@@ -75,7 +75,7 @@ class SessionStorage {
    */
   async deleteSession(id: string): Promise<boolean> {
     try {
-      const { error } = await supabase
+      const { error } = await supabaseServer
         .from('shopify_sessions')
         .delete()
         .eq('id', id);
@@ -102,7 +102,7 @@ class SessionStorage {
       console.log('🔍 [SESSION] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...');
       console.log('🔍 [SESSION] Supabase key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
       
-      const { data, error } = await supabase
+      const { data, error } = await supabaseServer
         .from('shopify_sessions')
         .select('*')
         .eq('shop', shop)
@@ -151,7 +151,7 @@ class SessionStorage {
    */
   async cleanupExpiredSessions(): Promise<number> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await supabaseServer
         .from('shopify_sessions')
         .delete()
         .lt('expires_at', new Date().toISOString())
