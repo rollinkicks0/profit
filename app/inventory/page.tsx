@@ -112,6 +112,42 @@ function StoreValueContent() {
               </div>
             </div>
 
+            {/* Location-wise Value Breakdown */}
+            {inventoryData.locationTotals && inventoryData.locationTotals.length > 0 && (
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                  <svg className="w-6 h-6 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                  Inventory Value by Location
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {inventoryData.locationTotals.map((location: any) => (
+                    <div key={location.locationName} className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+                      <h3 className="text-lg font-semibold text-gray-800 mb-3">{location.locationName}</h3>
+                      <div className="space-y-2">
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Value</span>
+                          <span className="text-xl font-bold text-blue-600">
+                            {inventoryData.currency} {location.value}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Units</span>
+                          <span className="text-sm font-semibold text-gray-900">{location.units.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-sm text-gray-600">Products</span>
+                          <span className="text-sm font-semibold text-gray-900">{location.products}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Products Table */}
             <div className="bg-white rounded-lg shadow-md overflow-hidden">
               <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">

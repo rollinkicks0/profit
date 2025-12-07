@@ -134,10 +134,16 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // Calculate store value
+    // Calculate store value (total and by location)
     const productsWithInventory: any[] = [];
     let totalValue = 0;
     let totalUnits = 0;
+    const locationTotals: { [locName: string]: { value: number; units: number; products: number } } = {};
+
+    // Initialize location totals
+    activeLocations.forEach((loc: any) => {
+      locationTotals[loc.name] = { value: 0, units: 0, products: 0 };
+    });
 
     allProducts.forEach(product => {
       const productId = product.id.toString();
@@ -153,6 +159,24 @@ export async function GET(request: NextRequest) {
         totalValue += productValue;
         totalUnits += stockData.total;
 
+        // Calculate value per location for this product
+        const locationBreakdownWithValue = Object.entries(stockData.byLocation).map(([name, qty]) => {
+          const locationValue = basePrice * (qty as number);
+          
+          // Add to location totals
+          if (locationTotals[name]) {
+            locationTotals[name].value += locationValue;
+            locationTotals[name].units += qty as number;
+            locationTotals[name].products += 1;
+          }
+          
+          return {
+            locationName: name,
+            quantity: qty,
+            value: locationValue.toFixed(2),
+          };
+        });
+
         productsWithInventory.push({
           productId: product.id,
           productTitle: product.title,
@@ -161,10 +185,7 @@ export async function GET(request: NextRequest) {
           totalStock: stockData.total,
           value: productValue.toFixed(2),
           variantCount: product.variants?.length || 0,
-          locationBreakdown: Object.entries(stockData.byLocation).map(([name, qty]) => ({
-            locationName: name,
-            quantity: qty,
-          })),
+          locationBreakdown: locationBreakdownWithValue,
         });
       }
     });
@@ -174,6 +195,11 @@ export async function GET(request: NextRequest) {
 
     console.log(`✅ Found ${productsWithInventory.length} products with stock`);
     console.log(`💰 Total inventory value: ${totalValue.toFixed(2)}`);
+    
+    // Log location breakdown
+    Object.entries(locationTotals).forEach(([name, data]) => {
+      console.log(`  📍 ${name}: ${data.value.toFixed(2)} (${data.units} units, ${data.products} products)`);
+    });
 
     return NextResponse.json({
       success: true,
@@ -185,6 +211,12 @@ export async function GET(request: NextRequest) {
       locations: activeLocations.map((loc: any) => ({
         id: loc.id,
         name: loc.name,
+      })),
+      locationTotals: Object.entries(locationTotals).map(([name, data]) => ({
+        locationName: name,
+        value: data.value.toFixed(2),
+        units: data.units,
+        products: data.products,
       })),
     });
   } catch (error: any) {
