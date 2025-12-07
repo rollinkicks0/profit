@@ -16,15 +16,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    console.log('📊 [STATS] Looking up session for shop:', shop);
     const sessions = await sessionStorage.findSessionsByShop(shop);
+    console.log('📊 [STATS] Found sessions:', sessions.length);
     const session = sessions[0];
 
     if (!session || !session.accessToken) {
+      console.error('❌ [STATS] No valid session found');
+      console.error('Session details:', { 
+        hasSession: !!session, 
+        hasToken: !!session?.accessToken,
+        sessionId: session?.id 
+      });
       return NextResponse.json(
         { error: 'Not authenticated. Please install the app first.' },
         { status: 401 }
       );
     }
+
+    console.log('✅ [STATS] Valid session found, fetching data...');
 
     // Calculate date ranges
     const now = new Date();

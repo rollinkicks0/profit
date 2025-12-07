@@ -98,16 +98,32 @@ class SessionStorage {
    */
   async findSessionsByShop(shop: string): Promise<ShopifySession[]> {
     try {
+      console.log('🔍 [SESSION] Looking up sessions for shop:', shop);
+      
       const { data, error } = await supabase
         .from('shopify_sessions')
         .select('*')
         .eq('shop', shop)
         .order('created_at', { ascending: false });
 
-      if (error || !data) {
-        console.log('⚠️ No sessions found for shop:', shop);
+      if (error) {
+        console.error('❌ [SESSION] Supabase error:', error);
         return [];
       }
+
+      if (!data || data.length === 0) {
+        console.log('⚠️ [SESSION] No sessions found for shop:', shop);
+        return [];
+      }
+
+      console.log(`✅ [SESSION] Found ${data.length} session(s) for shop:`, shop);
+      console.log('[SESSION] First session details:', {
+        id: data[0].id,
+        shop: data[0].shop,
+        hasToken: !!data[0].access_token,
+        tokenPrefix: data[0].access_token?.substring(0, 10) + '...',
+        scope: data[0].scope,
+      });
 
       return data.map(row => ({
         id: row.id,
@@ -119,7 +135,7 @@ class SessionStorage {
         expiresAt: row.expires_at,
       }));
     } catch (error) {
-      console.error('❌ Error finding sessions:', error);
+      console.error('❌ [SESSION] Exception finding sessions:', error);
       return [];
     }
   }

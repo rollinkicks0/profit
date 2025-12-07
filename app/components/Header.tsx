@@ -19,15 +19,34 @@ export default function Header() {
       localStorage.setItem('shopify_shop', shop);
       localStorage.setItem('last_page', pathname);
       
+      // Check URL for auth_success parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const authSuccess = urlParams.get('auth_success');
+      
+      if (authSuccess === 'true') {
+        console.log('✅ Auth success detected, stopping loading state');
+        setIsAuthenticating(false);
+        // Clean up URL
+        const cleanUrl = `${pathname}?shop=${shop}`;
+        window.history.replaceState({}, '', cleanUrl);
+      }
+      
       // Check if authenticated
       const checkAuth = async () => {
         try {
+          console.log('🔍 Checking auth status for shop:', shop);
           const response = await fetch(`/api/auth/check?shop=${shop}`);
           const data = await response.json();
+          console.log('🔍 Auth check result:', data);
           setIsAuthenticated(data.authenticated);
+          
+          if (data.authenticated) {
+            setIsAuthenticating(false);
+          }
         } catch (error) {
-          console.error('Error checking auth:', error);
+          console.error('❌ Error checking auth:', error);
           setIsAuthenticated(false);
+          setIsAuthenticating(false);
         } finally {
           setCheckingAuth(false);
         }
