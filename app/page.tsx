@@ -117,22 +117,6 @@ function DashboardContent() {
       <Header />
 
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {error && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <p className="text-red-800">
-              <strong>Error:</strong> {error}
-            </p>
-            {error.includes('Not authenticated') && (
-              <button
-                onClick={() => handleOAuthRedirect(shop!)}
-                className="mt-2 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 transition-colors"
-              >
-                Authenticate Now
-              </button>
-            )}
-          </div>
-        )}
-
         {loading ? (
           <div className="bg-white rounded-lg shadow-md p-8 text-center">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-500 border-t-transparent"></div>
