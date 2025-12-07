@@ -23,5 +23,7 @@ export interface ShopifySession {
   state: string;
   accessToken?: string;
   isOnline: boolean;
+  scope?: string;
+  expiresAt?: string;
 }
 

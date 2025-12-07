@@ -37,14 +37,26 @@ export async function GET(request: NextRequest) {
       throw new Error('Failed to get access token');
     }
 
-    // Store session
-    await sessionStorage.storeSession({
+    console.log('✅ Access token received, storing session...');
+
+    // Store session with extended info
+    const sessionStored = await sessionStorage.storeSession({
       id: `offline_${shop}`,
       shop: shop,
       state: state || '',
       accessToken: access_token,
       isOnline: false,
+      scope: scope,
+      // Offline tokens don't expire, but set a far future date for consistency
+      expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year
     });
+
+    if (!sessionStored) {
+      console.error('❌ Failed to store session');
+      throw new Error('Failed to store session');
+    }
+
+    console.log('✅ Session stored successfully for shop:', shop);
 
     // Simple redirect back to app (localStorage will handle the page redirect)
     const host = searchParams.get('host');
