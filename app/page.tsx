@@ -174,14 +174,7 @@ function DashboardContent() {
               </div>
             </div>
 
-            <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-              <h3 className="text-lg font-semibold text-blue-900 mb-2">Quick Navigation</h3>
-              <p className="text-blue-700 mb-4">Use the navigation above to:</p>
-              <ul className="list-disc list-inside text-blue-800 space-y-2">
-                <li><strong>Orders:</strong> View detailed order analytics with date ranges and filters</li>
-                <li><strong>Expenses:</strong> Track your business expenses (coming soon)</li>
-              </ul>
-            </div>
+            
           </>
         )}
       </div>
