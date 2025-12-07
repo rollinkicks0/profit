@@ -132,11 +132,11 @@ function StoreValueContent() {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {inventoryData.products.map((product: any) => {
-                      const isExpanded = expandedProducts.has(product.variantId.toString());
+                      const isExpanded = expandedProducts.has(product.productId.toString());
                       
                       return (
                         <>
-                          <tr key={product.variantId} className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleProduct(product.variantId.toString())}>
+                          <tr key={product.productId} className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleProduct(product.productId.toString())}>
                             <td className="px-6 py-4">
                               <div className="flex items-center">
                                 {product.productImage && (
@@ -144,19 +144,17 @@ function StoreValueContent() {
                                 )}
                                 <div>
                                   <div className="text-sm font-medium text-gray-900">{product.productTitle}</div>
-                                  {product.variantTitle !== 'Default Title' && (
-                                    <div className="text-xs text-gray-500">{product.variantTitle}</div>
-                                  )}
+                                  <div className="text-xs text-gray-500">{product.variantCount} variant{product.variantCount !== 1 ? 's' : ''}</div>
                                 </div>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-sm text-gray-500">{product.sku || '-'}</td>
+                            <td className="px-6 py-4 text-sm text-gray-500">-</td>
                             <td className="px-6 py-4 text-sm text-right font-medium text-gray-900">
-                              {inventoryData.currency} {product.price}
+                              {inventoryData.currency} {product.basePrice}
                             </td>
                             <td className="px-6 py-4 text-sm text-right">
                               <span className="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                {product.stock} units
+                                {product.totalStock} units
                               </span>
                             </td>
                             <td className="px-6 py-4 text-sm text-right font-bold text-blue-600">
@@ -167,7 +165,7 @@ function StoreValueContent() {
                                 className="text-gray-400 hover:text-gray-600"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleProduct(product.variantId.toString());
+                                  toggleProduct(product.productId.toString());
                                 }}
                               >
                                 <svg
@@ -182,14 +180,14 @@ function StoreValueContent() {
                             </td>
                           </tr>
                           
-                          {isExpanded && (
+                          {isExpanded && product.locationBreakdown.length > 0 && (
                             <tr>
                               <td colSpan={6} className="px-6 py-4 bg-gray-50">
                                 <div className="text-sm">
                                   <p className="font-semibold text-gray-700 mb-2">Stock by Location:</p>
                                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                    {product.locationBreakdown.map((loc: any) => (
-                                      <div key={loc.locationId} className="bg-white rounded-lg p-3 border border-gray-200">
+                                    {product.locationBreakdown.map((loc: any, idx: number) => (
+                                      <div key={idx} className="bg-white rounded-lg p-3 border border-gray-200">
                                         <p className="text-xs text-gray-500">{loc.locationName}</p>
                                         <p className="text-lg font-bold text-gray-900">{loc.quantity}</p>
                                       </div>
