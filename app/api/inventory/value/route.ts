@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
     let nextPageUrl: string | null = `https://${shop}/admin/api/2024-10/products.json?limit=250&fields=id,title,variants,image`;
     
     while (nextPageUrl) {
-      const response = await axios.get(nextPageUrl, {
+      const response: any = await axios.get(nextPageUrl, {
         headers: {
           'X-Shopify-Access-Token': session.accessToken,
         },
