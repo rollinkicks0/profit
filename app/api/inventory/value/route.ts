@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    console.log('Fetching inventory value for shop:', shop);
+    console.log('📦 Fetching inventory value for shop:', shop);
 
     // Fetch all locations
     const locationsResponse = await axios.get(
@@ -39,6 +39,7 @@ export async function GET(request: NextRequest) {
     );
     const locations = locationsResponse.data.locations || [];
     const activeLocations = locations.filter((loc: any) => loc.active);
+    console.log(`📍 Found ${activeLocations.length} active locations`);
 
     // Fetch all products with variants
     let allProducts: any[] = [];
@@ -63,90 +64,123 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    console.log(`Fetched ${allProducts.length} products`);
+    console.log(`✅ Fetched ${allProducts.length} products`);
 
-    // Calculate store value (simplified - by product, not variant)
+    // Collect all inventory item IDs with their product mapping
+    const inventoryItemMap: { [inventoryItemId: string]: { productId: any; variantId: any } } = {};
+    
+    allProducts.forEach(product => {
+      product.variants?.forEach((variant: any) => {
+        if (variant.inventory_item_id) {
+          inventoryItemMap[variant.inventory_item_id] = {
+            productId: product.id,
+            variantId: variant.id,
+          };
+        }
+      });
+    });
+
+    const allInventoryItemIds = Object.keys(inventoryItemMap);
+    console.log(`📊 Total variants to check: ${allInventoryItemIds.length}`);
+
+    // Fetch ALL inventory levels in batches (max 50 per request)
+    const inventoryLevels: any[] = [];
+    const batchSize = 50;
+
+    for (let i = 0; i < allInventoryItemIds.length; i += batchSize) {
+      const batch = allInventoryItemIds.slice(i, i + batchSize);
+      
+      try {
+        const inventoryResponse = await axios.get(
+          `https://${shop}/admin/api/2024-10/inventory_levels.json?inventory_item_ids=${batch.join(',')}&limit=250`,
+          {
+            headers: {
+              'X-Shopify-Access-Token': session.accessToken,
+            },
+          }
+        );
+        
+        inventoryLevels.push(...(inventoryResponse.data.inventory_levels || []));
+        console.log(`📦 Fetched batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(allInventoryItemIds.length / batchSize)}`);
+      } catch (error) {
+        console.error(`❌ Error fetching inventory batch:`, error);
+      }
+    }
+
+    console.log(`✅ Total inventory levels fetched: ${inventoryLevels.length}`);
+
+    // Group inventory by product
+    const productStockMap: { [productId: string]: { total: number; byLocation: { [locName: string]: number } } } = {};
+
+    inventoryLevels.forEach((level: any) => {
+      if (level.available > 0) {
+        const mapping = inventoryItemMap[level.inventory_item_id];
+        if (mapping) {
+          const productId = mapping.productId.toString();
+          
+          if (!productStockMap[productId]) {
+            productStockMap[productId] = { total: 0, byLocation: {} };
+          }
+          
+          productStockMap[productId].total += level.available;
+          
+          // Track by location
+          const location = activeLocations.find((loc: any) => loc.id === level.location_id);
+          if (location) {
+            productStockMap[productId].byLocation[location.name] = 
+              (productStockMap[productId].byLocation[location.name] || 0) + level.available;
+          }
+        }
+      }
+    });
+
+    // Calculate store value
     const productsWithInventory: any[] = [];
     let totalValue = 0;
     let totalUnits = 0;
-    let productsWithStock = 0;
 
-    for (const product of allProducts) {
-      // Get base price (from first variant or cheapest variant)
-      const basePrice = product.variants && product.variants.length > 0
-        ? parseFloat(product.variants[0].price || 0)
-        : 0;
+    allProducts.forEach(product => {
+      const productId = product.id.toString();
+      const stockData = productStockMap[productId];
+      
+      if (stockData && stockData.total > 0) {
+        // Get base price (from first variant)
+        const basePrice = product.variants && product.variants.length > 0
+          ? parseFloat(product.variants[0].price || 0)
+          : 0;
 
-      // Calculate total stock across all variants
-      let totalProductStock = 0;
-      const locationBreakdown: { [locationName: string]: number } = {};
-
-      for (const variant of product.variants || []) {
-        try {
-          // Fetch inventory levels for this variant
-          const inventoryItemId = variant.inventory_item_id;
-          
-          if (inventoryItemId) {
-            const inventoryResponse = await axios.get(
-              `https://${shop}/admin/api/2024-10/inventory_levels.json?inventory_item_ids=${inventoryItemId}`,
-              {
-                headers: {
-                  'X-Shopify-Access-Token': session.accessToken,
-                },
-              }
-            );
-
-            inventoryResponse.data.inventory_levels?.forEach((level: any) => {
-              if (level.available > 0) {
-                totalProductStock += level.available;
-                
-                // Track by location
-                const location = activeLocations.find((loc: any) => loc.id === level.location_id);
-                if (location) {
-                  locationBreakdown[location.name] = (locationBreakdown[location.name] || 0) + level.available;
-                }
-              }
-            });
-          }
-        } catch (error) {
-          console.error(`Error fetching inventory for variant ${variant.id}:`, error);
-        }
-      }
-
-      // Only include products with stock > 0
-      if (totalProductStock > 0) {
-        const productValue = basePrice * totalProductStock;
+        const productValue = basePrice * stockData.total;
         totalValue += productValue;
-        totalUnits += totalProductStock;
-        productsWithStock++;
+        totalUnits += stockData.total;
 
         productsWithInventory.push({
           productId: product.id,
           productTitle: product.title,
           productImage: product.image?.src || null,
           basePrice: basePrice.toFixed(2),
-          totalStock: totalProductStock,
+          totalStock: stockData.total,
           value: productValue.toFixed(2),
           variantCount: product.variants?.length || 0,
-          locationBreakdown: Object.entries(locationBreakdown).map(([name, qty]) => ({
+          locationBreakdown: Object.entries(stockData.byLocation).map(([name, qty]) => ({
             locationName: name,
             quantity: qty,
           })),
         });
       }
-    }
+    });
 
     // Sort by value (highest first)
     productsWithInventory.sort((a, b) => parseFloat(b.value) - parseFloat(a.value));
 
-    console.log(`Found ${productsWithStock} products with stock, total value: ${totalValue}`);
+    console.log(`✅ Found ${productsWithInventory.length} products with stock`);
+    console.log(`💰 Total inventory value: ${totalValue.toFixed(2)}`);
 
     return NextResponse.json({
       success: true,
       currency: 'NPR',
       totalValue: totalValue.toFixed(2),
       totalUnits,
-      totalProducts: productsWithStock,
+      totalProducts: productsWithInventory.length,
       products: productsWithInventory,
       locations: activeLocations.map((loc: any) => ({
         id: loc.id,
@@ -154,7 +188,8 @@ export async function GET(request: NextRequest) {
       })),
     });
   } catch (error: any) {
-    console.error('Error calculating inventory value:', error);
+    console.error('❌ Error calculating inventory value:', error);
+    console.error('Error details:', error.response?.data || error.message);
     return NextResponse.json(
       { 
         success: false,
