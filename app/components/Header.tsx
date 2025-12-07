@@ -41,22 +41,28 @@ export default function Header() {
 
   const handleReAuthenticate = () => {
     if (!shop) {
+      console.error('❌ No shop parameter provided');
       alert('Please provide shop parameter in URL');
       return;
     }
     
+    console.log('🔐 Starting authentication for shop:', shop);
     setIsAuthenticating(true);
     
     // Store current page to redirect back after auth (in localStorage)
     const currentPage = pathname + (shop ? `?shop=${shop}` : '');
     localStorage.setItem('redirect_after_auth', currentPage);
+    console.log('💾 Stored redirect page:', currentPage);
     
     const authUrl = `/api/auth?shop=${shop}`;
+    console.log('🔐 Redirecting to auth URL:', authUrl);
     
     // Break out of iframe if needed
     if (window.top !== window.self) {
+      console.log('🪟 In iframe, redirecting parent window');
       window.top!.location.href = authUrl;
     } else {
+      console.log('🪟 In main window, redirecting');
       window.location.href = authUrl;
     }
   };
