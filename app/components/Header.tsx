@@ -46,8 +46,7 @@ export default function Header() {
     { name: 'Orders Analytics', path: '/orders' },
     { name: 'Orders List', path: '/orders/list' },
     { name: 'Expenses', path: '/expenses' },
-    { name: 'Profit', path: '/profit' },
-    { name: 'Pricing', path: '/pricing' },
+    { name: 'Store Value', path: '/inventory' },
     { name: 'Test Products', path: '/products/test' },
   ];
 
