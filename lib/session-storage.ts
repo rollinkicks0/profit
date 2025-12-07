@@ -99,6 +99,8 @@ class SessionStorage {
   async findSessionsByShop(shop: string): Promise<ShopifySession[]> {
     try {
       console.log('🔍 [SESSION] Looking up sessions for shop:', shop);
+      console.log('🔍 [SESSION] Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL?.substring(0, 30) + '...');
+      console.log('🔍 [SESSION] Supabase key exists:', !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
       
       const { data, error } = await supabase
         .from('shopify_sessions')
@@ -106,13 +108,17 @@ class SessionStorage {
         .eq('shop', shop)
         .order('created_at', { ascending: false });
 
+      console.log('🔍 [SESSION] Query completed. Error:', error, 'Data length:', data?.length);
+
       if (error) {
         console.error('❌ [SESSION] Supabase error:', error);
+        console.error('❌ [SESSION] Error details:', JSON.stringify(error, null, 2));
         return [];
       }
 
       if (!data || data.length === 0) {
         console.log('⚠️ [SESSION] No sessions found for shop:', shop);
+        console.log('⚠️ [SESSION] Query returned:', data);
         return [];
       }
 
